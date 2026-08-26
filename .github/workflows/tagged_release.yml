@@ -91,11 +91,10 @@ jobs:
             Write-Error "rustup not found at $cargoBin"
           }
 
-          # 3. Install the GNU target via rustup, and pin it as default so cargo
-          #    does NOT fall back to the broken MSVC host toolchain.
+          # 3. Add the GNU target to the EXISTING toolchain (small download) and
+          #    do NOT try to install a separate GNU host toolchain (large and
+          #    stalls on this runner). Cargo will use gcc.exe as the linker.
           rustup target add x86_64-pc-windows-gnu
-          rustup override set stable-x86_64-pc-windows-gnu
-          rustup default stable-x86_64-pc-windows-gnu
 
           # 4. Export PATH (mingw bin + cargo bin) and target vars for later steps
           $env:Path = "$mingwBin;$cargoBin;$env:Path"
