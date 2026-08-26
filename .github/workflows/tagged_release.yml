@@ -73,14 +73,22 @@ jobs:
         shell: bash
         run: |
           # The MSVC Build Tools (VS_MSBUILD/VC/Tools/MSVC) must be present and on
-          # PATH for this to work. Prepend the newest toolchain's Hostx64/x64 dir
-          # so the real MSVC link.exe shadows Git's GNU link.
+          # PATH for this to work. Prepend a toolchain's Hostx64/x64 dir so the
+          # real MSVC link.exe shadows Git's GNU link. Note: paths contain spaces,
+          # so always keep them quoted and never pipe through space-splitting tools.
           export VS_MSBUILD="C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools"
           if [ -d "$VS_MSBUILD/VC/Tools/MSVC" ]; then
-            # Pick a toolchain dir via glob (no GNU sort -V on Git-bash) and
-            # strip any trailing slashes so the path joins cleanly.
-            LATEST=$(echo "$VS_MSBUILD"/VC/Tools/MSVC/*/ | tr ' ' '\n' | sed '/^$/d' | tail -1)
-            LATEST="${LATEST%/}"
+            # Use a bash glob array to handle spaces in the path correctly.
+            shopt -s nullglob
+            dirs=( "$VS_MSBUILD"/VC/Tools/MSVC/*/ )
+            if [ ${#dirs[@]} -gt 0 ]; then
+              # Take the last glob match as the toolchain dir, strip trailing slash.
+              LATEST="${dirs[${#dirs[@]}-1]}"
+              LATEST="${LATEST%/}"
+            else
+              echo "ERROR: no MSVC toolchain dirs found under $VS_MSBUILD/VC/Tools/MSVC"
+              exit 1
+            fi
             MSVC_BIN="$LATEST/bin/Hostx64/x64"
             echo "MSVC linker dir: $MSVC_BIN"
             if [ ! -f "$MSVC_BIN/link.exe" ]; then
