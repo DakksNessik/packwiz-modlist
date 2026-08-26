@@ -72,17 +72,19 @@ jobs:
       - name: Build (release)
         shell: bash
         run: |
-          # Prepend the real MSVC linker dir so it shadows Git-for-Windows' GNU link.
+          # The MSVC Build Tools (VS_MSBUILD/VC/Tools/MSVC) must be present and on
+          # PATH for this to work. If they are, prepend the newest toolchain's
+          # Hostx64/x64 dir so the real MSVC link.exe shadows Git's GNU link.
           export VS_MSBUILD="C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools"
-          export PATH="$USERPROFILE/.cargo/bin:$PATH"
           if [ -d "$VS_MSBUILD/VC/Tools/MSVC" ]; then
-            # Find the newest MSVC toolchain dir (contains link.exe)
             LATEST=$(ls -d "$VS_MSBUILD"/VC/Tools/MSVC/*/ 2>/dev/null | sort -V | tail -1)
-            export PATH="$LATEST/bin/Hostx64/x64:$PATH"
-            echo "MSVC linker dir: $LATEST/bin/Hostx64/x64"
+            export PATH="$LATEST/bin/Hostx64/x64:$USERPROFILE/.cargo/bin:$PATH"
+            echo "MSVC linker: $LATEST/bin/Hostx64/x64/link.exe"
+          else
+            echo "ERROR: MSVC Build Tools not found at $VS_MSBUILD"
+            echo "The runner image does not contain the VS C++ build tools."
+            exit 1
           fi
-          echo "link resolved to: $(command -v link.exe || echo MISSING)"
-          echo "link --help first line: $(link.exe --help 2>&1 | head -1)"
           cargo build --release
 
       - name: Rename binary
