@@ -28,7 +28,7 @@ jobs:
           mv "target/release/${{ env.BINARY_NAME }}" "target/${{ env.BINARY_NAME }}-linux-x86_64-musl"
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.BINARY_NAME }}-linux-x86_64-musl
           path: target/${{ env.BINARY_NAME }}-linux-x86_64-musl
@@ -48,14 +48,16 @@ jobs:
         run: cargo install cross --locked
 
       - name: Cross build (glibc)
-        run: cross build --release --target x86_64-unknown-linux-gnu
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cross build --release --target x86_64-unknown-linux-gnu
 
       - name: Rename binary
         run: |
           mv "target/x86_64-unknown-linux-gnu/release/${{ env.BINARY_NAME }}" "target/${{ env.BINARY_NAME }}-linux-x86_64-gnu"
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.BINARY_NAME }}-linux-x86_64-gnu
           path: target/${{ env.BINARY_NAME }}-linux-x86_64-gnu
@@ -80,7 +82,7 @@ jobs:
           mv "target/release/${{ env.BINARY_NAME }}.exe" "target/${{ env.BINARY_NAME }}-windows-x86_64.exe"
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.BINARY_NAME }}-windows-x86_64
           path: target/${{ env.BINARY_NAME }}-windows-x86_64.exe
@@ -94,7 +96,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           path: artifacts
 
