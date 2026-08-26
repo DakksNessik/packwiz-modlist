@@ -44,6 +44,10 @@ jobs:
       - name: Install Rust + cross deps (Alpine)
         run: apk add --no-cache cargo rust openssl-dev pkgconfig docker-cli
 
+      - name: Install rustup (required by cross)
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+
       - name: Install cross
         run: cargo install cross --locked
 
