@@ -74,8 +74,49 @@ jobs:
         with:
           targets: x86_64-pc-windows-gnu
 
+      - name: Ensure MinGW-w64 linker is available
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          Write-Output "=== Detecting toolchain availability ==="
+          if (Get-Command gcc -ErrorAction SilentlyContinue) { Write-Output "gcc found: $(gcc --version | Select-Object -First 1)" }
+          else { Write-Output "gcc NOT found" }
+          if (Get-Command winget -ErrorAction SilentlyContinue) { Write-Output "winget available" } else { Write-Output "winget NOT available" }
+          if (Get-Command choco -ErrorAction SilentlyContinue) { Write-Output "choco available" } else { Write-Output "choco NOT available" }
+
+          # Try to provision MinGW-w64 via whichever package manager exists
+          if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) {
+            if (Get-Command choco -ErrorAction SilentlyContinue) {
+              Write-Output "=== Installing MinGW-w64 via choco ==="
+              choco install mingw -y --no-progress
+            } elseif (Get-Command winget -ErrorAction SilentlyContinue) {
+              Write-Output "=== Installing MSYS2 via winget ==="
+              winget install --id MSYS2.MSYS2 --accept-source-agreements --accept-package-agreements
+              winget install --id MSYS2.MINGW64 --accept-source-agreements --accept-package-agreements
+            } else {
+              Write-Output "ERROR: no gcc, choco, or winget available"
+              exit 1
+            }
+          }
+
+          # Locate gcc and prepend its dir to PATH for all subsequent steps
+          $gccPath = (Get-Command gcc -ErrorAction SilentlyContinue).Source
+          Write-Output "gcc resolved to: $gccPath"
+          if ($gccPath) {
+            $gccDir = Split-Path $gccPath
+            Write-Output "MINGW_BIN=$gccDir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            Write-Output "prepending to PATH: $gccDir"
+          } else {
+            Write-Output "ERROR: gcc not found after install attempt"
+            exit 1
+          }
+
       - name: Build (release)
-        run: cargo build --release --target x86_64-pc-windows-gnu
+        shell: bash
+        run: |
+          if [ -n "$MINGW_BIN" ]; then export PATH="$MINGW_BIN:$PATH"; fi
+          which gcc && gcc --version | head -1
+          cargo build --release --target x86_64-pc-windows-gnu
 
       - name: Rename binary
         shell: bash
