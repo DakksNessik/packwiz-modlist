@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust + cross deps (Alpine)
-        run: apk add --no-cache cargo rust openssl-dev pkgconfig docker-cli
+        run: apk add --no-cache cargo rust openssl-dev pkgconfig docker-cli curl
 
       - name: Install rustup (required by cross)
         run: |
