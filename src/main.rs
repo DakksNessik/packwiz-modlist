@@ -20,6 +20,10 @@ mod output;
 
 #[tokio::main]
 async fn main() {
+  // Load a .env file at runtime if present (optional). Env vars set in the
+  // shell take precedence and always win over the file.
+  let _ = dotenvy::dotenv();
+
   let args = Args::parse();
 
   match args.color_mode {

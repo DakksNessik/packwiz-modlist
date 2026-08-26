@@ -99,4 +99,10 @@ packwizml --cache .packwizml.cache
 * [ ] Templates (kinda like preset-format)
 
 ### About Curseforge API
-Set `CF_API_KEY` environment variable
+
+The CurseForge API requires an API key, which is read at **runtime** (it is no longer required at build time):
+
+* Set `CF_API_KEY` in the environment, e.g. `export CF_API_KEY=...`
+* or place it in a `.env` file in the working directory (`CF_API_KEY=...`), which is loaded automatically via [dotenvy](https://crates.io/crates/dotenvy).
+
+The key is only needed when the pack actually contains CurseForge mods. Packs with only Modrinth mods work without it. If a CurseForge mod is present but no key is set, the program fails with a clear error message.

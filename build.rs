@@ -4,9 +4,6 @@ extern crate clap;
 extern crate log;
 
 use std::ffi::OsString;
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
 
 use clap::CommandFactory;
 use clap_complete::{generate_to, Generator, Shell};
@@ -32,8 +29,6 @@ fn main() -> anyhow::Result<()> {
   // generate_completions(Shell::Bash, "completions")?;
   // generate_completions(Shell::Zsh, "completions")?;
   // generate_completions(Shell::Fish, "completions")?;
-
-  dotenv_build::output(dotenv_build::Config::default())?;
 
   Ok(())
 }

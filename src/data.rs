@@ -16,7 +16,6 @@ use crate::object::{
   ModrinthTeamMember, Pack, PackMods, Project,
 };
 
-const CURSEFORGE_API_KEY: &str = env!("CF_API_KEY");
 const CURSEFORGE_API: &str = "https://api.curseforge.com/v1";
 const MODRINTH_API: &str = "https://api.modrinth.com/v2";
 
@@ -124,13 +123,16 @@ async fn request_modrinth_projects(ids: Vec<String>) -> GlobalResult<Vec<Modrint
 //   Ok(project)
 // }
 
-async fn request_curseforge_projects(ids: Vec<u32>) -> GlobalResult<Vec<CurseForgeProject>> {
+async fn request_curseforge_projects(
+  ids: Vec<u32>,
+  api_key: &str,
+) -> GlobalResult<Vec<CurseForgeProject>> {
   let ids = CurseforgeModIds { mod_ids: ids };
   let url = format!("{CURSEFORGE_API}/mods");
   let response = Client::builder()
     .build()?
     .post(url)
-    .header("x-api-key", CURSEFORGE_API_KEY)
+    .header("x-api-key", api_key)
     .json(&ids)
     .send()
     .await?;
@@ -207,8 +209,21 @@ pub async fn get_curseforge_projects(
         .map(|(key, value)| (key, value[0]))
         .collect::<HashMap<_, _>>();
 
-      let curseforge_ids = filter.filter_map(|it| it.id().parse().ok()).collect();
-      let projects = request_curseforge_projects(curseforge_ids)
+      let curseforge_ids: Vec<u32> =
+        filter.filter_map(|it| it.id().parse().ok()).collect();
+
+      if curseforge_ids.is_empty() {
+        return Ok(curseforge);
+      }
+
+      let api_key = std::env::var("CF_API_KEY").map_err(|_| {
+        GlobalError::custom(
+          "CurseForge",
+          "CF_API_KEY is not set. Set it in the environment or a .env file to query CurseForge mods.",
+        )
+      })?;
+
+      let projects = request_curseforge_projects(curseforge_ids, &api_key)
         .await?
         .into_iter()
         .map(|it| (lookup[&it.id.to_string()], Project::from(it)));
