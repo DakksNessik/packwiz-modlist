@@ -69,57 +69,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust (GNU toolchain)
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-gnu
-
-      - name: Ensure MinGW-w64 linker is available
+      - name: Ensure MinGW-w64 linker + GNU toolchain
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Continue'
-          Write-Output "=== Detecting toolchain availability ==="
-          if (Get-Command gcc -ErrorAction SilentlyContinue) { Write-Output "gcc found: $(gcc --version | Select-Object -First 1)" }
-          else { Write-Output "gcc NOT found" }
-          if (Get-Command winget -ErrorAction SilentlyContinue) { Write-Output "winget available" } else { Write-Output "winget NOT available" }
-          if (Get-Command choco -ErrorAction SilentlyContinue) { Write-Output "choco available" } else { Write-Output "choco NOT available" }
+          $ErrorActionPreference = 'Stop'
 
-          # Try to provision MinGW-w64 via whichever package manager exists
-          if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) {
-            if (Get-Command choco -ErrorAction SilentlyContinue) {
-              Write-Output "=== Installing MinGW-w64 via choco ==="
-              choco install mingw -y --no-progress
-            } elseif (Get-Command winget -ErrorAction SilentlyContinue) {
-              Write-Output "=== Installing MSYS2 via winget ==="
-              winget install --id MSYS2.MSYS2 --accept-source-agreements --accept-package-agreements
-            } else {
-              Write-Output "ERROR: no gcc, choco, or winget available"
-              exit 1
-            }
+          # 1. Ensure MinGW-w64 gcc is installed (choco has it from prior runs)
+          if (-not (Test-Path "C:\ProgramData\mingw64\mingw64\bin\gcc.exe")) {
+            choco install mingw -y --no-progress
           }
-
-          # The choco mingw package installs to C:\ProgramData\mingw64\mingw64\bin.
-          # It updates the system PATH, but this process' PATH is stale, so add it
-          # explicitly and export it for subsequent steps via GITHUB_ENV.
           $mingwBin = "C:\ProgramData\mingw64\mingw64\bin"
-          if (Test-Path "$mingwBin\gcc.exe") {
-            Write-Output "MinGW gcc found at $mingwBin"
-            $env:Path = "$mingwBin;$env:Path"
-            Write-Output "MINGW_BIN=$mingwBin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          } elseif (Get-Command gcc -ErrorAction SilentlyContinue) {
-            $gccDir = Split-Path (Get-Command gcc).Source
-            Write-Output "MinGW gcc found on PATH at $gccDir"
-            Write-Output "MINGW_BIN=$gccDir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          } else {
-            Write-Output "ERROR: gcc not found after install attempt"
-            exit 1
-          }
+          if (-not (Test-Path "$mingwBin\gcc.exe")) { Write-Error "MinGW gcc missing at $mingwBin" }
+          Write-Output "MinGW gcc OK at $mingwBin"
+
+          # 2. Install the GNU target via rustup, and pin it as default so cargo
+          #    does NOT fall back to the broken MSVC host toolchain.
+          rustup target add x86_64-pc-windows-gnu
+          rustup override set stable-x86_64-pc-windows-gnu
+          rustup default stable-x86_64-pc-windows-gnu
+
+          # 3. Export PATH (mingw bin first) and target vars for later steps
+          $env:Path = "$mingwBin;$env:Path"
+          Write-Output "MINGW_BIN=$mingwBin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+          Write-Output "=== verification ==="
+          rustup show active-toolchain
+          gcc --version | Select-Object -First 1
 
       - name: Build (release)
         shell: bash
         run: |
-          if [ -n "$MINGW_BIN" ]; then export PATH="$MINGW_BIN:$PATH"; fi
-          which gcc && gcc --version | head -1
+          export PATH="$MINGW_BIN:$PATH"
+          # Ensure cargo uses the GNU host toolchain and gcc as the linker
+          export CARGO_BUILD_TARGET="x86_64-pc-windows-gnu"
+          export RUSTFLAGS="-C linker=$MINGW_BIN/gcc.exe"
           cargo build --release --target x86_64-pc-windows-gnu
 
       - name: Rename binary
