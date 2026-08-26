@@ -82,15 +82,25 @@ jobs:
           if (-not (Test-Path "$mingwBin\gcc.exe")) { Write-Error "MinGW gcc missing at $mingwBin" }
           Write-Output "MinGW gcc OK at $mingwBin"
 
-          # 2. Install the GNU target via rustup, and pin it as default so cargo
+          # 2. rustup + cargo live under %USERPROFILE%\.cargo\bin; ensure on PATH
+          $cargoBin = "$env:USERPROFILE\.cargo\bin"
+          if (Test-Path "$cargoBin\rustup.exe") {
+            $env:Path = "$cargoBin;$env:Path"
+            Write-Output "rustup found at $cargoBin"
+          } else {
+            Write-Error "rustup not found at $cargoBin"
+          }
+
+          # 3. Install the GNU target via rustup, and pin it as default so cargo
           #    does NOT fall back to the broken MSVC host toolchain.
           rustup target add x86_64-pc-windows-gnu
           rustup override set stable-x86_64-pc-windows-gnu
           rustup default stable-x86_64-pc-windows-gnu
 
-          # 3. Export PATH (mingw bin first) and target vars for later steps
-          $env:Path = "$mingwBin;$env:Path"
+          # 4. Export PATH (mingw bin + cargo bin) and target vars for later steps
+          $env:Path = "$mingwBin;$cargoBin;$env:Path"
           Write-Output "MINGW_BIN=$mingwBin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Output "CARGO_BIN=$cargoBin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
           Write-Output "=== verification ==="
           rustup show active-toolchain
@@ -99,7 +109,7 @@ jobs:
       - name: Build (release)
         shell: bash
         run: |
-          export PATH="$MINGW_BIN:$PATH"
+          export PATH="$MINGW_BIN:$CARGO_BIN:$PATH"
           # Ensure cargo uses the GNU host toolchain and gcc as the linker
           export CARGO_BUILD_TARGET="x86_64-pc-windows-gnu"
           export RUSTFLAGS="-C linker=$MINGW_BIN/gcc.exe"
