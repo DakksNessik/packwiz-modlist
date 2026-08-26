@@ -63,61 +63,25 @@ jobs:
           if-no-files-found: error
 
   windows:
-    name: Build Windows (GNU)
+    name: Build Windows (MSVC)
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure MinGW-w64 linker + GNU toolchain
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-
-          # 1. Ensure MinGW-w64 gcc is installed (choco has it from prior runs)
-          if (-not (Test-Path "C:\ProgramData\mingw64\mingw64\bin\gcc.exe")) {
-            choco install mingw -y --no-progress
-          }
-          $mingwBin = "C:\ProgramData\mingw64\mingw64\bin"
-          if (-not (Test-Path "$mingwBin\gcc.exe")) { Write-Error "MinGW gcc missing at $mingwBin" }
-          Write-Output "MinGW gcc OK at $mingwBin"
-
-          # 2. rustup + cargo live under %USERPROFILE%\.cargo\bin; ensure on PATH
-          $cargoBin = "$env:USERPROFILE\.cargo\bin"
-          if (Test-Path "$cargoBin\rustup.exe") {
-            $env:Path = "$cargoBin;$env:Path"
-            Write-Output "rustup found at $cargoBin"
-          } else {
-            Write-Error "rustup not found at $cargoBin"
-          }
-
-          # 3. Add the GNU target to the EXISTING toolchain (small download) and
-          #    do NOT try to install a separate GNU host toolchain (large and
-          #    stalls on this runner). Cargo will use gcc.exe as the linker.
-          rustup target add x86_64-pc-windows-gnu
-
-          # 4. Export PATH (mingw bin + cargo bin) and target vars for later steps
-          $env:Path = "$mingwBin;$cargoBin;$env:Path"
-          Write-Output "MINGW_BIN=$mingwBin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          Write-Output "CARGO_BIN=$cargoBin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-
-          Write-Output "=== verification ==="
-          rustup show active-toolchain
-          gcc --version | Select-Object -First 1
-
       - name: Build (release)
         shell: bash
         run: |
-          export PATH="$MINGW_BIN:$CARGO_BIN:$PATH"
-          # Ensure cargo uses the GNU host toolchain and gcc as the linker
-          export CARGO_BUILD_TARGET="x86_64-pc-windows-gnu"
-          export RUSTFLAGS="-C linker=$MINGW_BIN/gcc.exe"
-          cargo build --release --target x86_64-pc-windows-gnu
+          # The runner image pre-provisions a full MSVC host toolchain + VS Build
+          # Tools; MSBuild bin and Git usr/bin ordering is set in the image so the
+          # real MSVC linker wins. Ensure cargo/rustup are on PATH.
+          export PATH="$USERPROFILE/.cargo/bin:$PATH"
+          cargo build --release
 
       - name: Rename binary
         shell: bash
         run: |
-          mv "target/x86_64-pc-windows-gnu/release/${{ env.BINARY_NAME }}.exe" "target/${{ env.BINARY_NAME }}-windows-x86_64.exe"
+          mv "target/release/${{ env.BINARY_NAME }}.exe" "target/${{ env.BINARY_NAME }}-windows-x86_64.exe"
 
       - name: Upload binary
         uses: actions/upload-artifact@v3
