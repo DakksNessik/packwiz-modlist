@@ -72,10 +72,17 @@ jobs:
       - name: Build (release)
         shell: bash
         run: |
-          # The runner image pre-provisions a full MSVC host toolchain + VS Build
-          # Tools; MSBuild bin and Git usr/bin ordering is set in the image so the
-          # real MSVC linker wins. Ensure cargo/rustup are on PATH.
+          # Prepend the real MSVC linker dir so it shadows Git-for-Windows' GNU link.
+          export VS_MSBUILD="C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools"
           export PATH="$USERPROFILE/.cargo/bin:$PATH"
+          if [ -d "$VS_MSBUILD/VC/Tools/MSVC" ]; then
+            # Find the newest MSVC toolchain dir (contains link.exe)
+            LATEST=$(ls -d "$VS_MSBUILD"/VC/Tools/MSVC/*/ 2>/dev/null | sort -V | tail -1)
+            export PATH="$LATEST/bin/Hostx64/x64:$PATH"
+            echo "MSVC linker dir: $LATEST/bin/Hostx64/x64"
+          fi
+          echo "link resolved to: $(command -v link.exe || echo MISSING)"
+          echo "link --help first line: $(link.exe --help 2>&1 | head -1)"
           cargo build --release
 
       - name: Rename binary
