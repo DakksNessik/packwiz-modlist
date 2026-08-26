@@ -63,22 +63,24 @@ jobs:
           if-no-files-found: error
 
   windows:
-    name: Build Windows (MSVC)
+    name: Build Windows (GNU)
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Install Rust (GNU toolchain)
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
 
       - name: Build (release)
-        run: cargo build --release
+        run: cargo build --release --target x86_64-pc-windows-gnu
 
       - name: Rename binary
         shell: bash
         run: |
-          mv "target/release/${{ env.BINARY_NAME }}.exe" "target/${{ env.BINARY_NAME }}-windows-x86_64.exe"
+          mv "target/x86_64-pc-windows-gnu/release/${{ env.BINARY_NAME }}.exe" "target/${{ env.BINARY_NAME }}-windows-x86_64.exe"
 
       - name: Upload binary
         uses: actions/upload-artifact@v3
