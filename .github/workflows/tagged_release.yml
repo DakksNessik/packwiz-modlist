@@ -73,13 +73,17 @@ jobs:
         shell: bash
         run: |
           # The MSVC Build Tools (VS_MSBUILD/VC/Tools/MSVC) must be present and on
-          # PATH for this to work. If they are, prepend the newest toolchain's
-          # Hostx64/x64 dir so the real MSVC link.exe shadows Git's GNU link.
+          # PATH for this to work. Prepend the newest toolchain's Hostx64/x64 dir
+          # so the real MSVC link.exe shadows Git's GNU link.
           export VS_MSBUILD="C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools"
           if [ -d "$VS_MSBUILD/VC/Tools/MSVC" ]; then
-            LATEST=$(ls -d "$VS_MSBUILD"/VC/Tools/MSVC/*/ 2>/dev/null | sort -V | tail -1)
+            # Use glob expansion and pick a toolchain dir (no GNU sort -V, which is
+            # unavailable on Windows/Git-bash). Take the first match or a known path.
+            LATEST=$(echo "$VS_MSBUILD"/VC/Tools/MSVC/*/ | tr ' ' '\n' | tail -1)
+            [ -n "$LATEST" ] || LATEST="$VS_MSBUILD/VC/Tools/MSVC/"*/
             export PATH="$LATEST/bin/Hostx64/x64:$USERPROFILE/.cargo/bin:$PATH"
             echo "MSVC linker: $LATEST/bin/Hostx64/x64/link.exe"
+            [ -f "$LATEST/bin/Hostx64/x64/link.exe" ] || { echo "ERROR: link.exe not found in MSVC toolchain"; exit 1; }
           else
             echo "ERROR: MSVC Build Tools not found at $VS_MSBUILD"
             echo "The runner image does not contain the VS C++ build tools."
