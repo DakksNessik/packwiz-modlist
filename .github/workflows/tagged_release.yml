@@ -41,14 +41,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust + Docker deps
-        run: apk add --no-cache cargo rust docker-cli
+      - name: Install Rust + cross deps (Alpine)
+        run: apk add --no-cache cargo rust openssl-dev pkgconfig docker-cli
+
+      - name: Install cross
+        run: cargo install cross --locked
 
       - name: Cross build (glibc)
-        uses: cross-rs/cross@v0.2.5
-        with:
-          command: build
-          args: --release --target x86_64-unknown-linux-gnu
+        run: cross build --release --target x86_64-unknown-linux-gnu
 
       - name: Rename binary
         run: |
@@ -98,8 +98,27 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-          generate_release_notes: true
+      - name: Create release and upload assets (Gitea API)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          apk add --no-cache jq curl
+          API="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases"
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "Creating release for tag $TAG"
+          resp=$(curl -sS -X POST "$API" \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\"}")
+          id=$(echo "$resp" | jq -r '.id')
+          echo "Release id: $id"
+          for f in artifacts/*/*; do
+            [ -f "$f" ] || continue
+            name=$(basename "$f")
+            echo "Uploading $name"
+            curl -sS -X POST "$API/$id/assets?name=$name" \
+              -H "Authorization: token $GH_TOKEN" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@$f" >/dev/null
+          done
