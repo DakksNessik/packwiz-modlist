@@ -33,7 +33,7 @@ Build from source with Cargo (a Rust toolchain is required):
 cargo install packwiz-modlist
 ```
 
-You can also grab a prebuilt binary from the [Releases](https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/releases) page (Linux musl, Linux glibc, and Windows are built automatically by Gitea Actions).
+You can also grab a prebuilt binary from the [Releases](https://github.com/DakksNessik/packwiz-modlist/releases) page (Linux musl, Linux glibc, macOS, and Windows are built automatically by GitHub Actions).
 
 ## Usage
 
@@ -147,13 +147,14 @@ The project is written in Rust (edition 2021). To build locally:
 cargo build --release
 ```
 
-The `tagged_release.yml` workflow on Gitea Actions builds and releases three binaries on every `v*` tag:
+The `tagged_release.yml` workflow on GitHub Actions builds and releases four binaries on every `v*` tag:
 
-| Platform      | Toolchain | Notes                                     |
-|:--------------|:----------|:------------------------------------------|
-| Linux (musl)  | Alpine    | Fully static binary                       |
-| Linux (glibc) | `rust:1-bookworm` | Built in a Debian container via Docker |
-| Windows       | MSVC      | Built on a Windows runner with VS Build Tools |
+| Platform      | Runner           | Toolchain | Notes                          |
+|:--------------|:-----------------|:----------|:-------------------------------|
+| Linux (musl)  | `ubuntu-latest`  | musl      | Fully static binary            |
+| Linux (glibc) | `ubuntu-latest`  | gnu       | Default host toolchain         |
+| macOS         | `macos-latest`   | Apple Silicon (aarch64) | |
+| Windows       | `windows-latest` | MSVC      | VS Build Tools on the runner   |
 
 ## Roadmap
 
