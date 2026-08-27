@@ -1,0 +1,87 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  BINARY_NAME: packwizml
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: fmt + clippy + tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Lint
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run tests
+        run: cargo test
+
+  build:
+    name: Build & smoke test (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux (glibc)
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            bin: packwizml
+          - name: macOS
+            os: macos-latest
+            target: aarch64-apple-darwin
+            bin: packwizml
+          - name: Windows (MSVC)
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: packwizml.exe
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build (release)
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Smoke test (version)
+        shell: bash
+        run: |
+          "./target/${{ matrix.target }}/release/${{ matrix.bin }}" --version
+
+      - name: Smoke test (help)
+        shell: bash
+        run: |
+          "./target/${{ matrix.target }}/release/${{ matrix.bin }}" --help >/dev/null
+
+      - name: Smoke test (about)
+        shell: bash
+        run: |
+          "./target/${{ matrix.target }}/release/${{ matrix.bin }}" --about
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: packwizml-${{ matrix.name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.bin }}
+          if-no-files-found: error

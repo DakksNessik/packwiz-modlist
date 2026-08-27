@@ -161,7 +161,7 @@ The `tagged_release.yml` workflow on GitHub Actions builds and releases four bin
 - [x] Sorting
 - [x] Use CurseForge official API
 - [x] Caching (avoid re-fetching projects on the same version)
-- [ ] Automated Tests
+- [x] Automated Tests
 - [ ] Packaging outside of cargo
 - [ ] Packaging with completions
 - [ ] Templates (kinda like preset-format)

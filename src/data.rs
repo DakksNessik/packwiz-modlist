@@ -7,14 +7,14 @@ use serde::de::DeserializeOwned;
 
 use GlobalError::Validation;
 
-use crate::Args;
 use crate::cache::Cache;
-use crate::error::{GlobalError, GlobalResult};
 use crate::error::ValidationError::{DirNotExist, MustBeDir, PackNotFound};
+use crate::error::{GlobalError, GlobalResult};
 use crate::object::{
-  CurseforgeModIds, CurseforgeMods, CurseForgeProject, ModrinthProject,
-  ModrinthTeamMember, Pack, PackMod, PackMods, Project,
+  CurseForgeProject, CurseforgeModIds, CurseforgeMods, ModrinthProject, ModrinthTeamMember, Pack,
+  PackMod, PackMods, Project,
 };
+use crate::Args;
 
 const CURSEFORGE_API: &str = "https://api.curseforge.com/v1";
 const MODRINTH_API: &str = "https://api.modrinth.com/v2";
@@ -210,8 +210,7 @@ pub async fn get_curseforge_projects(
         .map(|(key, value)| (key, value[0]))
         .collect::<HashMap<_, _>>();
 
-      let curseforge_ids: Vec<u32> =
-        filter.filter_map(|it| it.id().parse().ok()).collect();
+      let curseforge_ids: Vec<u32> = filter.filter_map(|it| it.id().parse().ok()).collect();
 
       if curseforge_ids.is_empty() {
         return Ok(curseforge);
@@ -232,9 +231,7 @@ pub async fn get_curseforge_projects(
               lookup.len()
             );
           }
-          curseforge.extend(
-            lookup.into_values().map(|pack_mod| placeholder_curseforge(pack_mod)),
-          );
+          curseforge.extend(lookup.into_values().map(placeholder_curseforge));
         }
       }
     }

@@ -72,7 +72,7 @@ pub async fn write(args: &Args, data: &Data) -> GlobalResult<()> {
       let path = if args.output_custom {
         path.clone()
       } else {
-        args.path.join(&path)
+        args.path.join(path)
       };
 
       if path.exists() && !args.force {
@@ -91,4 +91,82 @@ pub async fn write(args: &Args, data: &Data) -> GlobalResult<()> {
   }
 
   Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::object::{ModrinthProject, Project};
+
+  fn modrinth_project() -> Project {
+    Project::Modrinth(ModrinthProject {
+      id: "abc123".into(),
+      slug: "sodium".into(),
+      team: "team_abc".into(),
+      team_members: Vec::new(),
+      icon_url: None,
+      source_url: None,
+      title: "Sodium".into(),
+      description: "A modern rendering engine".into(),
+    })
+  }
+
+  #[test]
+  fn display_replaces_all_placeholders() {
+    let project = modrinth_project();
+    let out = display_project(
+      0,
+      "- [{INDEX}] {NAME} - {DESCRIPTION} ({URL}) [id={ID} slug={SLUG}]\n",
+      &project,
+    );
+
+    assert_eq!(
+      out,
+      "- [0] Sodium - A modern rendering engine (https://modrinth.com/mod/abc123) [id=abc123 slug=sodium]\n"
+    );
+  }
+
+  #[test]
+  fn display_uses_one_based_index() {
+    let project = modrinth_project();
+    assert_eq!(display_project(0, "{INDEX}", &project), "0");
+    assert_eq!(display_project(1, "{INDEX}", &project), "1");
+    assert_eq!(display_project(41, "{INDEX}", &project), "41");
+  }
+
+  #[test]
+  fn display_title_and_name_are_equivalent() {
+    let project = modrinth_project();
+    assert_eq!(
+      display_project(0, "{NAME}|{TITLE}", &project),
+      "Sodium|Sodium"
+    );
+  }
+
+  #[test]
+  fn display_description_and_summary_are_equivalent() {
+    let project = modrinth_project();
+    assert_eq!(
+      display_project(0, "{DESCRIPTION}|{SUMMARY}", &project),
+      "A modern rendering engine|A modern rendering engine"
+    );
+  }
+
+  #[test]
+  fn display_untouched_placeholders_remain() {
+    let project = modrinth_project();
+    assert_eq!(
+      display_project(0, "{NAME} {UNKNOWN}", &project),
+      "Sodium {UNKNOWN}"
+    );
+  }
+
+  #[test]
+  fn display_expands_literal_backslash_n() {
+    let project = modrinth_project();
+    assert_eq!(
+      display_project(0, "{NAME}\\n{URL}", &project),
+      "Sodium\nhttps://modrinth.com/mod/abc123"
+    );
+  }
 }
