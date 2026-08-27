@@ -6,7 +6,7 @@ Please **do not** file a public issue for security vulnerabilities. Instead, rep
 
 **Preferred:** GitHub private vulnerability reporting (Settings → Security → *Report a vulnerability*) for this repository.
 
-**Alternative:** Email the maintainer directly for this fork (Wes Sims).
+**Alternative:** Email the maintainer directly at **github+security@crazygnome.com** (or **github@crazygnome.com**).
 
 For issues that affect the **upstream** project, report to [Ricky12Awesome/packwiz-modlist](https://github.com/Ricky12Awesome/packwiz-modlist) instead.
 
