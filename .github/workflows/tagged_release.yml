@@ -16,10 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        # dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
         with:
           targets: x86_64-unknown-linux-musl
 
@@ -39,7 +41,8 @@ jobs:
              "target/${{ env.BINARY_NAME }}-linux-x86_64-musl"
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        # actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ env.BINARY_NAME }}-linux-x86_64-musl
           path: target/${{ env.BINARY_NAME }}-linux-x86_64-musl
@@ -50,10 +53,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        # dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
 
       - name: Build (release)
         # Default host target on ubuntu-latest is x86_64-unknown-linux-gnu.
@@ -65,7 +70,8 @@ jobs:
              "target/${{ env.BINARY_NAME }}-linux-x86_64-gnu"
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        # actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ env.BINARY_NAME }}-linux-x86_64-gnu
           path: target/${{ env.BINARY_NAME }}-linux-x86_64-gnu
@@ -76,10 +82,12 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        # dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
 
       - name: Build (release)
         run: cargo build --release
@@ -91,7 +99,8 @@ jobs:
              "target/${{ env.BINARY_NAME }}-macos-aarch64"
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        # actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ env.BINARY_NAME }}-macos-aarch64
           path: target/${{ env.BINARY_NAME }}-macos-aarch64
@@ -102,10 +111,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        # dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
 
       - name: Build (release)
         # windows-latest ships the VS Build Tools and rustup defaults to the
@@ -120,7 +131,8 @@ jobs:
              "target/${{ env.BINARY_NAME }}-windows-x86_64.exe"
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        # actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ env.BINARY_NAME }}-windows-x86_64
           path: target/${{ env.BINARY_NAME }}-windows-x86_64.exe
@@ -136,13 +148,15 @@ jobs:
       contents: write
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        # actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           path: artifacts
           merge-multiple: true
 
       - name: Create release and upload assets
-        uses: softprops/action-gh-release@v2
+        # softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
           files: artifacts/*
           fail_on_unmatched_files: true
