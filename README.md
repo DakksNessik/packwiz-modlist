@@ -153,7 +153,7 @@ The `tagged_release.yml` workflow on GitHub Actions builds and releases four bin
 |:--------------|:-----------------|:----------|:-------------------------------|
 | Linux (musl)  | `ubuntu-latest`  | musl      | Fully static binary            |
 | Linux (glibc) | `ubuntu-latest`  | gnu       | Default host toolchain         |
-| macOS         | `macos-latest`   | Apple Silicon (aarch64) | |
+| macOS         | `macos-latest`   | aarch64   | Apple Silicon           |
 | Windows       | `windows-latest` | MSVC      | VS Build Tools on the runner   |
 
 ## Roadmap

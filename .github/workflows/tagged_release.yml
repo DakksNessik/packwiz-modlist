@@ -23,9 +23,14 @@ jobs:
         with:
           targets: x86_64-unknown-linux-musl
 
+      - name: Install musl-gcc
+        # `ring` (rustls crypto backend) compiles C/asm via the `cc` crate and
+        # needs musl-gcc to target x86_64-unknown-linux-musl. Not preinstalled
+        # on ubuntu-latest, so install it explicitly.
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
       - name: Build (release)
-        # Fully static binary. Pure-Rust deps (reqwest + rustls) mean no
-        # musl-gcc/C toolchain is required.
+        # Fully static binary (statically linked musl libc).
         run: cargo build --release --target x86_64-unknown-linux-musl
 
       - name: Rename binary
