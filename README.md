@@ -21,6 +21,7 @@
 - [CurseForge API key](#curseforge-api-key)
 - [Development & Build](#development--build)
 - [Roadmap](#roadmap)
+- [Security](#security)
 - [License](#license)
 
 ---
@@ -165,6 +166,10 @@ The `tagged_release.yml` workflow on GitHub Actions builds and releases four bin
 - [ ] Packaging outside of cargo
 - [ ] Packaging with completions
 - [ ] Templates (kinda like preset-format)
+
+## Security
+
+Please report security vulnerabilities privately rather than in a public issue. See [SECURITY.md](SECURITY.md) for the reporting process and security context.
 
 ## License
 
