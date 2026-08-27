@@ -133,7 +133,9 @@ The CurseForge API requires an API key, which is read at **runtime** (it is **no
 * Set `CF_API_KEY` in the environment, e.g. `export CF_API_KEY=...`
 * or place it in a `.env` file in the working directory (`CF_API_KEY=...`), which is loaded automatically via [dotenvy](https://crates.io/crates/dotenvy).
 
-The key is only required when the pack actually contains CurseForge mods. Packs with only Modrinth mods work without a key. If a CurseForge mod is present but no key is set, the program fails with a clear error message.
+The key is only required when the pack actually contains CurseForge mods; packs with only Modrinth mods work without a key.
+
+> **Fallback behavior:** If the CurseForge API is unavailable (for example its edge CDN returns empty-body `403` responses) or no key is set, `packwizml` no longer aborts the run. Instead it substitutes a **placeholder** entry for each CurseForge mod — using the mod's name and a link to its numeric project ID (which CurseForge redirects to the real slug) — so a partial modlist/README is still produced from the resolved Modrinth mods. The command exits `0` and prints a warning to stdout, unless logging is turned off or silenced (log level below `Warn`). Placeholders are not written to the cache, so a later successful run replaces them with real data.
 
 > **Note:** the `.env` file is git-ignored so your key is never committed to the repository.
 

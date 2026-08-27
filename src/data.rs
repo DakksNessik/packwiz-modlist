@@ -13,7 +13,7 @@ use crate::error::{GlobalError, GlobalResult};
 use crate::error::ValidationError::{DirNotExist, MustBeDir, PackNotFound};
 use crate::object::{
   CurseforgeModIds, CurseforgeMods, CurseForgeProject, ModrinthProject,
-  ModrinthTeamMember, Pack, PackMods, Project,
+  ModrinthTeamMember, Pack, PackMod, PackMods, Project,
 };
 
 const CURSEFORGE_API: &str = "https://api.curseforge.com/v1";
@@ -194,6 +194,7 @@ pub async fn get_modrinth_projects(
 pub async fn get_curseforge_projects(
   cache: &mut Cache,
   mods: &PackMods,
+  show_warning: bool,
 ) -> GlobalResult<Vec<Project>> {
   let mut curseforge = Vec::with_capacity(mods.len());
 
@@ -216,31 +217,82 @@ pub async fn get_curseforge_projects(
         return Ok(curseforge);
       }
 
-      let api_key = std::env::var("CF_API_KEY").map_err(|_| {
-        GlobalError::custom(
-          "CurseForge",
-          "CF_API_KEY is not set. Set it in the environment or a .env file to query CurseForge mods.",
-        )
-      })?;
-
-      let projects = request_curseforge_projects(curseforge_ids, &api_key)
-        .await?
-        .into_iter()
-        .map(|it| (lookup[&it.id.to_string()], Project::from(it)));
-
-      cache.insert_all(projects.clone());
-      curseforge.extend(projects.map(|it| it.1));
+      // If the CurseForge API fails (e.g. the edge is returning empty-body 403s),
+      // fall back to placeholder entries instead of aborting the whole run, so a
+      // partial modlist/README can still be produced from the resolved Modrinth mods.
+      match resolve_curseforge_projects(&lookup, curseforge_ids).await {
+        Ok(projects) => {
+          cache.insert_all(projects.clone());
+          curseforge.extend(projects.into_iter().map(|it| it.1));
+        }
+        Err(_) => {
+          if show_warning {
+            println!(
+              "WARN: CurseForge API request failed; adding {} CurseForge mod(s) as placeholders.",
+              lookup.len()
+            );
+          }
+          curseforge.extend(
+            lookup.into_values().map(|pack_mod| placeholder_curseforge(pack_mod)),
+          );
+        }
+      }
     }
   };
 
   Ok(curseforge)
 }
 
-pub async fn get_projects(cache: &mut Cache, mods: &PackMods) -> GlobalResult<Vec<Project>> {
+async fn resolve_curseforge_projects<'a>(
+  lookup: &'a HashMap<String, &'a PackMod>,
+  curseforge_ids: Vec<u32>,
+) -> GlobalResult<Vec<(&'a PackMod, Project)>> {
+  let api_key = std::env::var("CF_API_KEY").map_err(|_| {
+    GlobalError::custom(
+      "CurseForge",
+      "CF_API_KEY is not set. Set it in the environment or a .env file to query CurseForge mods.",
+    )
+  })?;
+
+  let projects = request_curseforge_projects(curseforge_ids, &api_key)
+    .await?
+    .into_iter()
+    .map(|it| (lookup[&it.id.to_string()], Project::from(it)))
+    .collect::<Vec<_>>();
+
+  Ok(projects)
+}
+
+/// Build a placeholder `Project` for a CurseForge mod from the metadata already
+/// present in the packwiz file, so output can be produced without querying the
+/// (possibly unavailable) CurseForge API.
+fn placeholder_curseforge(pack_mod: &PackMod) -> Project {
+  let id = pack_mod.id();
+  let name = pack_mod.name.clone();
+  let id_num = id.parse::<u32>().unwrap_or(0);
+  // The real slug is only available via the CurseForge API, so point the link at
+  // the numeric project ID instead — CurseForge redirects /mc-mods/<id> to the slug.
+  Project::CurseForge(CurseForgeProject {
+    id: id_num,
+    slug: id_num.to_string(),
+    name,
+    summary: String::from(
+      "CurseForge mod — API unavailable, shown as a placeholder. See the CurseForge project page.",
+    ),
+    authors: Vec::new(),
+    logo: None,
+  })
+}
+
+pub async fn get_projects(
+  cache: &mut Cache,
+  mods: &PackMods,
+  show_warning: bool,
+) -> GlobalResult<Vec<Project>> {
   let mut projects = Vec::with_capacity(mods.len());
 
   let modrinth = get_modrinth_projects(cache, mods).await?;
-  let curseforge = get_curseforge_projects(cache, mods).await?;
+  let curseforge = get_curseforge_projects(cache, mods, show_warning).await?;
 
   projects.extend_from_slice(&modrinth);
   projects.extend_from_slice(&curseforge);

@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Nothing yet.
 
+## [1.5.4+hotfix.1] - 2026-08-26
+
+### Added
+
+- When the CurseForge API is unavailable (for example its edge CDN returns empty-body `403` responses) or no key is set, `packwizml` now falls back to **placeholder** entries for CurseForge mods instead of aborting the whole run, so a partial modlist/README can still be produced from the resolved Modrinth mods. The command exits `0`, and a warning is printed to stdout unless logging is turned off or silenced (log level below `Warn`). Placeholders are built from the local packwiz metadata and link to the numeric project ID (which CurseForge redirects to the real slug), and are not written to the cache so a later successful run replaces them with real data.
+
 ## [1.5.4] - 2026-08-26
 
 ### Changed
@@ -122,6 +128,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release. Reads a packwiz project and generates a markdown modlist from Modrinth and CurseForge projects.
 
 [Unreleased]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.4...main
+[1.5.4+hotfix.1]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.4...v1.5.4+hotfix.1
 [1.5.4]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.2...v1.5.4
 [1.5.3]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.2...v1.5.3
 [1.5.2]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.1...v1.5.2
