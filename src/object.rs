@@ -25,18 +25,20 @@ pub struct PackMod {
   pub filename: String,
   pub side: String,
   pub download: PackModDownload,
-  pub update: PackModUpdate,
+  #[serde(default)]
+  pub update: Option<PackModUpdate>,
 }
 
 impl PackMod {
   pub fn id(&self) -> String {
-    if let Some(pack_mod) = &self.update.modrinth {
-      pack_mod.mod_id.clone()
-    } else if let Some(pack_mod) = &self.update.curseforge {
-      pack_mod.project_id.to_string()
-    } else {
-      unreachable!()
+    if let Some(update) = &self.update {
+      if let Some(pack_mod) = &update.modrinth {
+        return pack_mod.mod_id.clone();
+      } else if let Some(pack_mod) = &update.curseforge {
+        return pack_mod.project_id.to_string();
+      }
     }
+    self.filename.clone()
   }
 
   pub fn hash(&self) -> &String {
@@ -49,6 +51,8 @@ pub struct PackModDownload {
   pub hash: String,
   #[serde(alias = "hash-format")]
   pub hash_format: String,
+  #[serde(default)]
+  pub url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -140,6 +144,7 @@ pub type Projects = Vec<Project>;
 pub enum Project {
   CurseForge(CurseForgeProject),
   Modrinth(ModrinthProject),
+  Local(crate::local::LocalProject),
 }
 
 impl From<CurseForgeProject> for Project {
@@ -161,6 +166,7 @@ impl Project {
         format!("https://www.curseforge.com/minecraft/mc-mods/{slug}")
       }
       Project::Modrinth(ModrinthProject { id, .. }) => format!("https://modrinth.com/mod/{id}"),
+      Project::Local(local) => local.url.clone(),
     }
   }
 
@@ -168,6 +174,7 @@ impl Project {
     match self {
       Project::CurseForge(CurseForgeProject { id, .. }) => id.to_string(),
       Project::Modrinth(ModrinthProject { id, .. }) => id.clone(),
+      Project::Local(local) => local.name.clone(),
     }
   }
 
@@ -175,6 +182,7 @@ impl Project {
     match self {
       Project::CurseForge(CurseForgeProject { slug, .. }) => slug.clone(),
       Project::Modrinth(ModrinthProject { slug, .. }) => slug.clone(),
+      Project::Local(local) => local.name.clone(),
     }
   }
 
@@ -182,6 +190,7 @@ impl Project {
     match self {
       Project::CurseForge(CurseForgeProject { name, .. }) => name.clone(),
       Project::Modrinth(ModrinthProject { title, .. }) => title.clone(),
+      Project::Local(local) => local.name.clone(),
     }
   }
 
@@ -189,6 +198,7 @@ impl Project {
     match self {
       Project::CurseForge(CurseForgeProject { summary, .. }) => summary.clone(),
       Project::Modrinth(ModrinthProject { description, .. }) => description.clone(),
+      Project::Local(local) => local.description.clone(),
     }
   }
 }

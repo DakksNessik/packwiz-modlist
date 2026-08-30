@@ -26,6 +26,15 @@ pub struct Args {
   /// Set the cache file
   #[clap(long, default_value = "./.packwiz-modlist.cache.json")]
   pub cache: PathBuf,
+  /// Directory for the downloaded-mod metadata cache (relative to --path unless -D)
+  #[clap(long, default_value = ".cache")]
+  pub cache_dir: PathBuf,
+  /// Disable '--cache-dir' being relative to '--path'
+  #[clap(short = 'D')]
+  pub cache_dir_custom: bool,
+  /// Skip downloading jars and only use cached/extracted metadata
+  #[clap(long, short = 'n')]
+  pub no_download: bool,
   /// Path to the directory contains all the mod metadata files
   #[clap(long, short = 'm', default_value = "mods", value_hint = clap::ValueHint::DirPath)]
   pub mods: PathBuf,

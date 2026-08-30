@@ -1,4 +1,4 @@
-use log::{info, LevelFilter};
+use log::info;
 use tokio::fs::File;
 use tokio::io::{stdout, AsyncWrite, AsyncWriteExt};
 
@@ -23,10 +23,7 @@ pub fn display_project(index: usize, format: &str, project: &Project) -> String 
 
 pub async fn generate(cache: &mut Cache, args: &Args) -> GlobalResult<Data> {
   let (pack, mods) = get_data(args)?;
-  // Warn on stdout only if logging isn't turned off or silenced (i.e. the level
-  // still permits Warn).
-  let show_warning = args.log_level >= LevelFilter::Warn;
-  let projects = get_projects(cache, &mods, show_warning).await?;
+  let projects = get_projects(cache, &mods, args).await?;
 
   Ok(Data {
     pack,

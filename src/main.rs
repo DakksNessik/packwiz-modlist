@@ -15,6 +15,7 @@ mod args;
 mod cache;
 mod data;
 mod error;
+mod local;
 mod object;
 mod output;
 
