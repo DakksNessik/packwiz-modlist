@@ -9,12 +9,14 @@ use simple_logger::SimpleLogger;
 
 use crate::args::{Args, ColorMode};
 use crate::error::{handle_error, GlobalError, GlobalResult, ValidationError};
+use crate::ignore::ensure_ignored;
 use crate::output::{generate, write};
 
 mod args;
 mod cache;
 mod data;
 mod error;
+mod ignore;
 mod local;
 mod object;
 mod output;
@@ -64,6 +66,8 @@ async fn main() {
 }
 
 async fn run(args: &Args) -> GlobalResult<()> {
+  ensure_ignored(args).await?;
+
   let mut cache = Cache::new(args).await?;
   let data = generate(&mut cache, args).await?;
 
