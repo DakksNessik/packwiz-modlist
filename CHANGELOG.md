@@ -21,6 +21,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Pre-existing `cargo clippy` warnings (redundant closure, needless borrow, suspicious `open_options`) and normalized formatting so the lint gate passes.
 
+## [1.5.5] - 2026-08-30
+
+### Added
+
+- **Local jar metadata resolution.** `packwizml` can now pull a mod's metadata directly from its own `.jar` file instead of relying on the Modrinth/CurseForge APIs. A new `Project::Local` variant carries metadata extracted from the jar, so real names, descriptions, and URLs are produced even when an API is unavailable or a mod isn't published on either store.
+
+- **CurseForge fallback via the CDN.** When the CurseForge API is unavailable or no key is set, `packwizml` now reconstructs the download URL from the mod's `file-id` + `filename` (`https://edge.forgecdn.net/files/{fid/1000}/{fid%1000}/{filename}`), downloads the jar, and extracts its embedded metadata — producing a fully-real README entry instead of a bare placeholder. The placeholder is retained only as a last resort if the download or extraction fails.
+
+- **Custom mod support.** Mods published on neither store (for example a bundle jar hosted on Gitea or GitHub) that carry a direct `[download].url` are now resolved from their jar. This also fixes the crash when a mod has no `[update]` section: `PackMod.update` is now optional, so `missing field 'update'` no longer aborts the run.
+
+- **Bandwidth/API-abuse guard via a metadata cache.** Extracted metadata is cached as `<download-hash>.toml` in `--cache-dir` (default `.cache/`), and the downloaded `.jar` is deleted after extraction. A later run with the same file hash reuses the cached TOML with zero network traffic; when a mod is updated its hash changes, which is a cache miss and triggers a fresh download.
+
+- **Auto-managed ignore files.** Every run ensures `.cache` and the modlist cache file (`.packwiz-modlist.cache.json`) are ignored by both `.gitignore` and `.packwizignore` at the pack root, keeping regenerable artifacts out of git and out of packwiz's index/refresh. The operation is idempotent and appends missing entries without touching existing content.
+
+### Changed
+
+- New CLI flags: `--cache-dir` / `-D` (default `.cache`, relative to `--path` unless `-D`) and `--no-download` / `-n` (cache-only mode that skips all network access).
+- `get_projects` and `get_curseforge_projects` now take the parsed `Args` (so the cache directory and log level are threaded through); `PackModDownload.url` is now optional.
+- Added the `zip` crate dependency for reading mod jars.
+
 ## [1.5.4+hotfix.1] - 2026-08-26
 
 ### Added
@@ -137,7 +157,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release. Reads a packwiz project and generates a markdown modlist from Modrinth and CurseForge projects.
 
-[Unreleased]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.4...main
+[Unreleased]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.5...main
+[1.5.5]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.4+hotfix.1...v1.5.5
 [1.5.4+hotfix.1]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.4...v1.5.4+hotfix.1
 [1.5.4]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.2...v1.5.4
 [1.5.3]: https://gitea.crazygnome.net/wessims.jr/packwiz-modlist/compare/v1.5.2...v1.5.3

@@ -1,10 +1,11 @@
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use itertools::Itertools;
 use reqwest::Client;
 use serde::de::DeserializeOwned;
 
+use crate::local::resolve_local;
 use GlobalError::Validation;
 
 use crate::cache::Cache;
@@ -165,7 +166,12 @@ pub async fn get_modrinth_projects(
 ) -> GlobalResult<Vec<Project>> {
   let mut modrinth = Vec::with_capacity(mods.len());
 
-  let filter = mods.iter().filter(|it| it.update.modrinth.is_some());
+  let filter = mods.iter().filter(|it| {
+    it.update
+      .as_ref()
+      .and_then(|u| u.modrinth.as_ref())
+      .is_some()
+  });
 
   match cache.get_all(filter.clone()) {
     Some(projects) => modrinth.extend(projects.into_iter().cloned()),
@@ -194,11 +200,16 @@ pub async fn get_modrinth_projects(
 pub async fn get_curseforge_projects(
   cache: &mut Cache,
   mods: &PackMods,
-  show_warning: bool,
+  args: &Args,
 ) -> GlobalResult<Vec<Project>> {
   let mut curseforge = Vec::with_capacity(mods.len());
 
-  let filter = mods.iter().filter(|it| it.update.curseforge.is_some());
+  let filter = mods.iter().filter(|it| {
+    it.update
+      .as_ref()
+      .and_then(|u| u.curseforge.as_ref())
+      .is_some()
+  });
 
   match cache.get_all(filter.clone()) {
     Some(projects) => curseforge.extend(projects.into_iter().cloned()),
@@ -217,27 +228,63 @@ pub async fn get_curseforge_projects(
       }
 
       // If the CurseForge API fails (e.g. the edge is returning empty-body 403s),
-      // fall back to placeholder entries instead of aborting the whole run, so a
-      // partial modlist/README can still be produced from the resolved Modrinth mods.
+      // fall back to downloading the jar from the reconstructed CDN URL and
+      // extracting its embedded metadata — only falling back to a bare numeric
+      // placeholder if the download or extraction fails.
       match resolve_curseforge_projects(&lookup, curseforge_ids).await {
         Ok(projects) => {
           cache.insert_all(projects.clone());
           curseforge.extend(projects.into_iter().map(|it| it.1));
         }
         Err(_) => {
-          if show_warning {
+          if args.log_level >= log::LevelFilter::Warn {
             println!(
-              "WARN: CurseForge API request failed; adding {} CurseForge mod(s) as placeholders.",
+              "WARN: CurseForge API request failed; resolving {} CurseForge mod(s) from their jars.",
               lookup.len()
             );
           }
-          curseforge.extend(lookup.into_values().map(placeholder_curseforge));
+          for pack_mod in lookup.into_values() {
+            match resolve_curseforge_from_jar(pack_mod, cache_dir(args)).await {
+              Some(project) => curseforge.push(project),
+              None => curseforge.push(placeholder_curseforge(pack_mod)),
+            }
+          }
         }
       }
     }
   };
 
   Ok(curseforge)
+}
+
+/// Reconstruct the CurseForge CDN URL for a mod file. The `.pw.toml` for a CF
+/// mod stores no download URL (it uses `mode = "metadata:curseforge"`), so the
+/// file is addressed directly on the CDN by file-id and filename.
+fn curseforge_cdn_url(pack_mod: &PackMod) -> Option<String> {
+  let cf = pack_mod.update.as_ref()?.curseforge.as_ref()?;
+  let file_id = cf.file_id;
+  Some(format!(
+    "https://edge.forgecdn.net/files/{}/{}/{}",
+    file_id / 1000,
+    file_id % 1000,
+    pack_mod.filename
+  ))
+}
+
+fn cache_dir(args: &Args) -> PathBuf {
+  if args.cache_dir_custom {
+    args.cache_dir.clone()
+  } else {
+    args.path.join(&args.cache_dir)
+  }
+}
+
+/// Try to resolve a CurseForge mod from its jar when the API is unavailable.
+async fn resolve_curseforge_from_jar(pack_mod: &PackMod, cache_dir: PathBuf) -> Option<Project> {
+  let url = curseforge_cdn_url(pack_mod)?;
+  resolve_local(pack_mod, &url, &cache_dir, false)
+    .await
+    .map(Project::Local)
 }
 
 async fn resolve_curseforge_projects<'a>(
@@ -284,15 +331,57 @@ fn placeholder_curseforge(pack_mod: &PackMod) -> Project {
 pub async fn get_projects(
   cache: &mut Cache,
   mods: &PackMods,
-  show_warning: bool,
+  args: &Args,
 ) -> GlobalResult<Vec<Project>> {
   let mut projects = Vec::with_capacity(mods.len());
 
   let modrinth = get_modrinth_projects(cache, mods).await?;
-  let curseforge = get_curseforge_projects(cache, mods, show_warning).await?;
+  let curseforge = get_curseforge_projects(cache, mods, args).await?;
+  let custom = get_custom_projects(mods, cache_dir(args), args.no_download).await;
 
   projects.extend_from_slice(&modrinth);
   projects.extend_from_slice(&curseforge);
+  projects.extend_from_slice(&custom);
 
   Ok(projects)
+}
+
+/// Resolve "custom" mods — those published on neither Modrinth nor CurseForge,
+/// carrying a direct `[download].url`. Their metadata is pulled from the jar
+/// itself, cached locally, and reused across runs until the file hash changes.
+async fn get_custom_projects(
+  mods: &PackMods,
+  cache_dir: PathBuf,
+  no_download: bool,
+) -> Vec<Project> {
+  let mut projects = Vec::new();
+
+  for pack_mod in mods {
+    let is_custom = match &pack_mod.update {
+      Some(update) => update.modrinth.is_none() && update.curseforge.is_none(),
+      None => true,
+    };
+
+    if !is_custom {
+      continue;
+    }
+
+    let Some(url) = &pack_mod.download.url else {
+      continue;
+    };
+
+    match resolve_local(pack_mod, url, &cache_dir, no_download).await {
+      Some(project) => projects.push(Project::Local(project)),
+      None => {
+        if !no_download {
+          log::warn!(
+            "Could not resolve custom mod \"{}\" from jar at {url}",
+            pack_mod.name
+          );
+        }
+      }
+    }
+  }
+
+  projects
 }

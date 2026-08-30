@@ -17,6 +17,7 @@
 - [Usage](#usage)
 - [Options](#options)
 - [Placeholders](#placeholders)
+- [Local / custom mods & the metadata cache](#local--custom-mods--the-metadata-cache)
 - [Sorting](#sorting)
 - [CurseForge API key](#curseforge-api-key)
 - [Development & Build](#development--build)
@@ -101,9 +102,21 @@ packwizml --sort-by Name # short: -s
 packwizml --reverse # short: -r
 
 # Sets the cache file
-# default: .packwizml.cache
-packwizml --cache .packwizml.cache
+# default: .packwiz-modlist.cache.json
+packwizml --cache .packwiz-modlist.cache.json
+
+# Sets the directory where downloaded mod metadata is cached
+# default: .cache (relative to --path unless '-D')
+packwizml --cache-dir .cache # short: -D
+
+# Skip downloading jars; only use cached/extracted metadata
+packwizml --no-download # short: -n
 ```
+
+> **Cache & ignore files:** on every run `packwizml` makes sure `.cache` and the modlist cache
+> file (`.packwiz-modlist.cache.json`) are ignored by both `.gitignore` and `.packwizignore` at
+> the pack root. It creates the files if missing and appends entries idempotently, so regenerable
+> artifacts stay out of git and out of packwiz's index.
 
 ### Placeholders
 
@@ -117,6 +130,28 @@ These placeholders are available in the `--format` string:
 | `{URL}`                      | Gets project URL                 |
 | `{SLUG}`                     | Gets project slug                |
 | `{ID}`                       | Gets project id                  |
+
+### Local / custom mods & the metadata cache
+
+`packwizml` can resolve mods that aren't (or can't be) looked up through the Modrinth / CurseForge
+APIs by reading the mod's own `.jar`:
+
+* **Custom mods** — published on neither store and carrying a direct `[download].url` (for example
+  a bundle jar hosted on Gitea or GitHub) — are resolved from their jar. Mods with no `[update]`
+  section are now supported instead of crashing with `missing field 'update'`.
+* **CurseForge fallback** — when the CurseForge API is unavailable or no key is set, `packwizml`
+  reconstructs the CDN URL from the mod's `file-id` + `filename`
+  (`https://edge.forgecdn.net/files/{fid/1000}/{fid%1000}/{filename}`), downloads the jar, and
+  extracts real metadata. A bare placeholder is only used as a last resort.
+
+Metadata is extracted from `META-INF/neoforge.mods.toml`, `META-INF/mods.toml`, or
+`fabric.mod.json` (whichever is present).
+
+To limit bandwidth and API abuse, the extracted metadata is cached as `<download-hash>.toml` in
+`--cache-dir` (default `.cache/`), and the downloaded `.jar` is deleted after extraction. Re-runs
+with the same file hash reuse the cache with **zero network traffic**; updating a mod changes its
+hash, which is a cache miss and triggers a fresh download. Use `--no-download` / `-n` to run purely
+from the cache.
 
 ### Sorting
 
@@ -136,7 +171,7 @@ The CurseForge API requires an API key, which is read at **runtime** (it is **no
 
 The key is only required when the pack actually contains CurseForge mods; packs with only Modrinth mods work without a key.
 
-> **Fallback behavior:** If the CurseForge API is unavailable (for example its edge CDN returns empty-body `403` responses) or no key is set, `packwizml` no longer aborts the run. Instead it substitutes a **placeholder** entry for each CurseForge mod — using the mod's name and a link to its numeric project ID (which CurseForge redirects to the real slug) — so a partial modlist/README is still produced from the resolved Modrinth mods. The command exits `0` and prints a warning to stdout, unless logging is turned off or silenced (log level below `Warn`). Placeholders are not written to the cache, so a later successful run replaces them with real data.
+> **Fallback behavior:** If the CurseForge API is unavailable (for example its edge CDN returns empty-body `403` responses) or no key is set, `packwizml` no longer aborts the run. It reconstructs each CurseForge mod's CDN URL and extracts real metadata from the jar (see [Local / custom mods & the metadata cache](#local--custom-mods--the-metadata-cache)). A placeholder entry — using the mod's name and a link to its numeric project ID — is used only as a last resort if the download or extraction fails. The command exits `0` and prints a warning to stdout unless logging is turned off or silenced (log level below `Warn`). Placeholders are not written to the cache, so a later successful run replaces them with real data.
 
 > **Note:** the `.env` file is git-ignored so your key is never committed to the repository.
 
