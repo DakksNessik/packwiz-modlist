@@ -86,7 +86,7 @@ pub struct CurseForgeProject {
   pub summary: String,
   #[serde(default)]
   pub authors: Vec<CurseForgeAuthor>,
-  pub logo: Option<CurseForgeLogo>
+  pub logo: Option<CurseForgeLogo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,6 +203,63 @@ impl Project {
   }
 }
 
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn modrinth_project() -> Project {
+    Project::Modrinth(ModrinthProject {
+      id: "abc123".into(),
+      slug: "sodium".into(),
+      team: "team_abc".into(),
+      team_members: Vec::new(),
+      icon_url: None,
+      source_url: None,
+      title: "Sodium".into(),
+      description: "A modern rendering engine".into(),
+    })
+  }
+
+  fn curseforge_project() -> Project {
+    Project::CurseForge(CurseForgeProject {
+      id: 238222,
+      slug: "jei".into(),
+      name: "Just Enough Items".into(),
+      summary: "Item and recipe viewing mod".into(),
+      authors: Vec::new(),
+      logo: None,
+    })
+  }
+
+  #[test]
+  fn modrinth_url_uses_project_id() {
+    assert_eq!(modrinth_project().url(), "https://modrinth.com/mod/abc123");
+  }
+
+  #[test]
+  fn curseforge_url_uses_slug() {
+    assert_eq!(
+      curseforge_project().url(),
+      "https://www.curseforge.com/minecraft/mc-mods/jei"
+    );
+  }
+
+  #[test]
+  fn accessors_return_expected_values() {
+    let m = modrinth_project();
+    assert_eq!(m.id(), "abc123");
+    assert_eq!(m.slug(), "sodium");
+    assert_eq!(m.title(), "Sodium");
+    assert_eq!(m.description(), "A modern rendering engine");
+
+    let c = curseforge_project();
+    assert_eq!(c.id(), "238222");
+    assert_eq!(c.slug(), "jei");
+    assert_eq!(c.title(), "Just Enough Items");
+    assert_eq!(c.description(), "Item and recipe viewing mod");
+  }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Data {
   pub pack: Pack,
@@ -213,10 +270,10 @@ pub struct Data {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CurseforgeModIds {
-  pub mod_ids: Vec<u32>
+  pub mod_ids: Vec<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurseforgeMods {
-  pub data: Vec<CurseForgeProject>
+  pub data: Vec<CurseForgeProject>,
 }

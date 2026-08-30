@@ -1,0 +1,57 @@
+---
+name: ✨ Feature request
+description: Suggest an idea or enhancement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! Please describe the feature and why it would be useful.
+
+        > **Note:** This repository is a **fork** of [Ricky12Awesome/packwiz-modlist](https://github.com/Ricky12Awesome/packwiz-modlist). If the feature would be better suited to the upstream project, consider proposing it there instead.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched the existing issues and feature requests for a duplicate
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What problem does this solve, or what gap does it fill?
+      placeholder: "I want to be able to ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the feature you'd like, as concretely as you can.
+      placeholder: "e.g. Add a --exclude flag to skip certain mods from the list."
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Any workarounds you've tried, or alternative approaches?
+    validations:
+      required: false
+  - type: input
+    id: example
+    attributes:
+      label: Example (optional)
+      description: A CLI invocation, format string, or sample output the feature would enable.
+      placeholder: "packwizml --exclude sodium --json"
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: I'm willing to implement this (or help)
+        - label: This is fork-specific (does not apply to upstream)

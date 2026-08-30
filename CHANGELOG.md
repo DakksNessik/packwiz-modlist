@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Nothing yet.
+- A `Validate` GitHub Actions workflow that runs on every PR and push to `main`: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`, plus release-binary smoke tests on Linux, macOS, and Windows (each built binary is executed with `--version`, `--help`, and `--about`, then uploaded as an artifact).
+- Unit tests covering format placeholder expansion (`{INDEX}`, `{NAME}`, `{DESCRIPTION}`, `{URL}`, `{ID}`, `{SLUG}`, literal `\n`) and the `Project` accessors / Modrinth / CurseForge URL construction.
+
+### Changed
+
+- The release pipeline now runs on standard GitHub-hosted runners (`ubuntu-latest`, `macos-latest`, `windows-latest`) instead of self-hosted Gitea runners, and adds a **macOS (Apple Silicon / aarch64)** build. Linux binaries are produced for both musl (fully static) and glibc.
+- All GitHub Actions are pinned to full commit SHAs to protect against mutable-tag supply-chain attacks, and the repository's Actions permission is restricted to `selected` (GitHub-owned actions plus the pinned third-party actions).
+
+### Fixed
+
+- Pre-existing `cargo clippy` warnings (redundant closure, needless borrow, suspicious `open_options`) and normalized formatting so the lint gate passes.
 
 ## [1.5.5] - 2026-08-30
 

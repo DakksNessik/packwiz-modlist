@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Upstream project
+    url: https://github.com/Ricky12Awesome/packwiz-modlist/issues
+    about: This repository is a fork. Report issues that are not specific to this fork upstream instead.
+  - name: packwiz project
+    url: https://github.com/packwiz/packwiz/issues
+    about: For questions about packwiz itself (the modpack tool), not this CLI.

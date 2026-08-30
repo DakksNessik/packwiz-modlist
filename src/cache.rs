@@ -31,6 +31,7 @@ impl Cache {
         let mut file = OpenOptions::new()
           .write(true)
           .create(true)
+          .truncate(false)
           .open(&args.cache)
           .await?;
 
