@@ -12,8 +12,8 @@ use std::path::Path;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::Args;
 use crate::error::GlobalResult;
+use crate::Args;
 
 /// Ensure `.gitignore` and `.packwizignore` at the pack root ignore the cache
 /// artifacts. Non-destructive: only adds missing entries, never rewrites or
@@ -30,7 +30,9 @@ pub async fn ensure_ignored(args: &Args) -> GlobalResult<()> {
       if entry.is_empty() {
         continue;
       }
-      let present = content.lines().any(|line| line.trim_end() == entry.as_str());
+      let present = content
+        .lines()
+        .any(|line| line.trim_end() == entry.as_str());
       if !present {
         if !content.is_empty() && !content.ends_with('\n') {
           content.push('\n');
